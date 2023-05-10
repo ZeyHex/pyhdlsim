@@ -4,7 +4,6 @@ All simulator executables must be visible in PATH.
 import subprocess
 import argparse
 from pathlib import Path
-import platform
 
 def file_ext(filepath):
     """Get file extension from filepath"""

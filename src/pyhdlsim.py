@@ -221,7 +221,7 @@ class Simulator:
         print(' '.join([d for d in self.defines]))
         print(' '.join([d for d in self.params]))
         # prepare and run elaboration
-        elab_args = "-a --prj files.prj %s -R -nolog " % self.top
+        elab_args = "-a --prj files.prj %s -R -nolog -timescale \"1 ns / 1 ps\" " % self.top
         elab_args += ' '.join(['-d ' + '"' + define + '"' for define in self.defines]) + ' '
         elab_args += ' '.join(['--generic_top ' + '"' + param + '"' for param in self.params]) + ' '
         elab_args += ' '.join(['-i ' + incdir for incdir in self.incdirs])+ ' '

@@ -116,13 +116,9 @@ class Simulator:
             prog : string with program name
             args : string with program arguments
         """
-        exec_str = prog + " " + args
+        exec_str = prog + ' ' + args
         print(exec_str)
-        if self.name == 'vivado':
-            exec_str = exec_str
-        else:
-            exec_str = exec_str.split()
-        child = subprocess.Popen(exec_str, cwd=self.cwd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        child = subprocess.Popen(exec_str, shell=True, cwd=self.cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
         """Reading shell output """
         while True:
@@ -176,7 +172,7 @@ class Simulator:
             ext = file_ext(src)
             if ext in ['.v', '.sv']:
                 sources += 'vlog -nologo -suppress 2902 %s %s -sv -timescale \"1 ns / 1 ps\" %s\n' % (defines, incdirs, src)
-            elif ext == 'vhd':
+            elif ext == '.vhd':
                 sources += 'vcom -93 %s\n' % src
         if not self.gui:
             run = 'run -all'
@@ -215,30 +211,35 @@ class Simulator:
         self._exec('vsim', vsim_args)
 
 
+    def _src_vivado(self, src):
+        srcc = ''
+        match file_ext(src):
+            case '.sv':  srcc += 'sv work %s\n' % src
+            case '.v':   srcc += 'verilog work %s\n' % src
+            case '.vhd': srcc += 'vhdl work %s\n' % src
+            case _:
+                for file_path in Path(src).glob('**/*'):
+                    srcc += self._src_vivado(file_path)
+        return srcc
+
+
     def _run_vivado(self):
         """Run Vivado simulator"""
         print('Run Vivado (cwd=%s)' % self.cwd)
         print(' '.join([d for d in self.defines]))
         print(' '.join([d for d in self.params]))
         # prepare and run elaboration
-        elab_args = "-a --prj files.prj %s -R -nolog -timescale \"1 ns / 1 ps\" " % self.top
-        elab_args += ' '.join(['-d ' + '"' + define + '"' for define in self.defines]) + ' '
-        elab_args += ' '.join(['--generic_top ' + '"' + param + '"' for param in self.params]) + ' '
-        elab_args += ' '.join(['-i ' + incdir for incdir in self.incdirs])+ ' '
+        elab_args = "-a --prj files.prj %s -R -nolog " % self.top
+        elab_args += ' '.join(['-d \"%s\"' % define for define in self.defines]) + ' '
+        elab_args += ' '.join(['--generic_top \"%s\"' % param for param in self.params]) + ' '
+        elab_args += ' '.join(['-i ' + incdir for incdir in self.incdirs]) + ' '
         sources = ''
         for src in self.sources:
-            ext = file_ext(src)
-            if ext == '.sv':
-                sources += 'sv work %s\n' % src
-            elif ext == '.v':
-                sources += 'verilog work %s\n' % src
-            elif ext == 'vhd':
-                sources += 'vhdl work %s\n' % src
+            sources += self._src_vivado(src)
+
         with path_join(self.cwd, 'files.prj').open(mode='w', encoding="utf-8") as f:
             f.write(sources)
-
         self._exec('xelab', elab_args)
-        
 
 
 class CliArgs:
